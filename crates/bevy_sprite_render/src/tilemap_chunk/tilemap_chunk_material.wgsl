@@ -4,9 +4,15 @@
     mesh2d_vertex_output::VertexOutput,
 }
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(0) var tileset: texture_2d_array<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(0) var tileset: texture_2d<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(1) var tileset_sampler: sampler;
 @group(#{MATERIAL_BIND_GROUP}) @binding(2) var tile_data: texture_2d<u32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(3) var<uniform> material: TilemapChunkMaterial;
+
+struct TilemapChunkMaterial {
+    tileset_grid_size: vec2<u32>,
+    _padding: vec2<u32>,
+}
 
 struct TileData {
     tileset_index: u32,
@@ -36,7 +42,6 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let chunk_size = textureDimensions(tile_data, 0);
     let tile_uv = in.uv * vec2<f32>(chunk_size);
     var tile_coord = clamp(vec2<u32>(floor(tile_uv)), vec2<u32>(0), chunk_size - 1);
-    tile_coord.y = chunk_size.y - 1 - tile_coord.y;
 
     let tile = get_tile_data(tile_coord);
 
@@ -44,8 +49,18 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
+    let grid_size = max(material.tileset_grid_size, vec2<u32>(1u, 1u));
+    let column = tile.tileset_index % grid_size.x;
+    let row = tile.tileset_index / grid_size.x;
+
+    if (row >= grid_size.y) {
+        discard;
+    }
+
+    let cell_size = vec2<f32>(1.0 / f32(grid_size.x), 1.0 / f32(grid_size.y));
     let local_uv = fract(tile_uv);
-    let tex_color = textureSample(tileset, tileset_sampler, local_uv, tile.tileset_index);
+    let atlas_uv = (vec2<f32>(f32(column), f32(row)) + local_uv) * cell_size;
+    let tex_color = textureSample(tileset, tileset_sampler, atlas_uv);
     let final_color = tex_color * tile.color;
 
     if (final_color.a < 0.001) {

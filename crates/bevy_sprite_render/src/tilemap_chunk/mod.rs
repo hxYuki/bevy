@@ -55,6 +55,8 @@ pub struct TilemapChunk {
     pub tile_display_size: UVec2,
     /// Handle to the tileset image containing all tile textures.
     pub tileset: Handle<Image>,
+    /// Tileset atlas grid dimensions in tiles, stored as `(columns, rows)`.
+    pub tileset_grid_size: UVec2,
     /// The alpha mode to use for the tilemap chunk.
     pub alpha_mode: AlphaMode2d,
 }
@@ -89,7 +91,9 @@ impl TilemapChunk {
 #[derive(Clone, Copy, Debug, Reflect)]
 #[reflect(Clone, Debug, Default)]
 pub struct TileData {
-    /// The index of the tile in the corresponding tileset array texture.
+    /// The index of the tile in the corresponding tileset atlas grid.
+    ///
+    /// This index is row-major: `index = row * columns + column`.
     pub tileset_index: u16,
     /// The color tint of the tile. White leaves the sampled texture color unchanged.
     pub color: Color,
@@ -132,6 +136,7 @@ fn on_insert_tilemap_chunk(mut world: DeferredWorld, HookContext { entity, .. }:
     let chunk_size = tilemap_chunk.chunk_size;
     let alpha_mode = tilemap_chunk.alpha_mode;
     let tileset = tilemap_chunk.tileset.clone();
+    let tileset_grid_size = tilemap_chunk.tileset_grid_size;
 
     let Some(tile_data) = world.get::<TilemapChunkTileData>(entity) else {
         warn!("TilemapChunkIndices not found for tilemap chunk {}", entity);
@@ -173,6 +178,7 @@ fn on_insert_tilemap_chunk(mut world: DeferredWorld, HookContext { entity, .. }:
     let material = materials.add(TilemapChunkMaterial {
         tileset,
         tile_data,
+        tileset_grid_size,
         alpha_mode,
     });
 

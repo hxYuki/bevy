@@ -5,7 +5,7 @@ use bevy_color::ColorToPacked;
 use bevy_image::{Image, ImageSampler, ToExtents};
 use bevy_math::UVec2;
 use bevy_reflect::prelude::*;
-use bevy_render::render_resource::*;
+use bevy_render::{render_asset::RenderAssets, render_resource::*, texture::GpuImage};
 use bevy_shader::ShaderRef;
 use bytemuck::{Pod, Zeroable};
 
@@ -25,15 +25,37 @@ impl Plugin for TilemapChunkMaterialPlugin {
 /// This material is used internally by the tilemap system to render chunks of tiles
 /// efficiently using a single draw call per chunk.
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+#[uniform(3, TilemapChunkMaterialUniform)]
 pub struct TilemapChunkMaterial {
     pub alpha_mode: AlphaMode2d,
 
-    #[texture(0, dimension = "2d_array")]
+    #[texture(0)]
     #[sampler(1)]
     pub tileset: Handle<Image>,
 
     #[texture(2, sample_type = "u_int")]
     pub tile_data: Handle<Image>,
+
+    /// Tileset atlas grid size in tiles, stored as `(columns, rows)`.
+    pub tileset_grid_size: UVec2,
+}
+
+#[derive(Clone, Default, ShaderType)]
+pub struct TilemapChunkMaterialUniform {
+    pub tileset_grid_size: UVec2,
+    pub _padding: UVec2,
+}
+
+impl AsBindGroupShaderType<TilemapChunkMaterialUniform> for TilemapChunkMaterial {
+    fn as_bind_group_shader_type(
+        &self,
+        _images: &RenderAssets<GpuImage>,
+    ) -> TilemapChunkMaterialUniform {
+        TilemapChunkMaterialUniform {
+            tileset_grid_size: self.tileset_grid_size.max(UVec2::ONE),
+            _padding: UVec2::ZERO,
+        }
+    }
 }
 
 impl Material2d for TilemapChunkMaterial {

@@ -2,7 +2,6 @@
 
 use bevy::{
     color::palettes::tailwind::RED_400,
-    image::{ImageArrayLayout, ImageLoaderSettings},
     prelude::*,
     sprite_render::{TileData, TilemapChunk, TilemapChunkTileData},
 };
@@ -45,14 +44,8 @@ fn setup(mut commands: Commands, assets: Res<AssetServer>) {
         TilemapChunk {
             chunk_size,
             tile_display_size,
-            tileset: assets.load_with_settings(
-                "textures/array_texture.png",
-                |settings: &mut ImageLoaderSettings| {
-                    // The tileset texture is expected to be an array of tile textures, so we tell the
-                    // `ImageLoader` that our texture is composed of 4 stacked tile images.
-                    settings.array_layout = Some(ImageArrayLayout::RowCount { rows: 4 });
-                },
-            ),
+            tileset: assets.load("textures/array_texture.png"),
+            tileset_grid_size: UVec2::new(1, 4),
             ..default()
         },
         TilemapChunkTileData(tile_data),
