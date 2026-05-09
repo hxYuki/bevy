@@ -283,6 +283,24 @@ pub fn observe<M>(observer: impl IntoEntityObserver<M>) -> impl EntityCommand {
     }
 }
 
+/// An [`EntityCommand`] that creates an [`Observer`](crate::observer::Observer)
+/// watching for an [`EntityEvent`](crate::event::EntityEvent) of type `E` whose
+/// [`event_target`](crate::event::EntityEvent::event_target) targets any given entities.
+///
+/// The observer has the same lifetime as this entity.
+///
+/// See [`observe`] for more details.
+#[track_caller]
+pub fn observe_for<M, I: IntoIterator<Item = Entity> + Send + 'static>(
+    targets: I,
+    observer: impl IntoEntityObserver<M>,
+) -> impl EntityCommand {
+    let caller = MaybeLocation::caller();
+    move |mut entity: EntityWorldMut| {
+        entity.observe_for_with_caller(targets, observer, caller);
+    }
+}
+
 /// An [`EntityCommand`] that clones parts of an entity onto another entity,
 /// configured through [`EntityClonerBuilder`].
 ///

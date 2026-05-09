@@ -2069,6 +2069,18 @@ impl<'a> EntityCommands<'a> {
         self.queue(entity_command::observe(observer))
     }
 
+    /// Creates an [`Observer`](crate::observer::Observer) watching for an [`EntityEvent`] of type `E` whose [`EntityEvent::event_target`]
+    /// targets any given entities.
+    ///
+    /// The observer has the same lifetime as this entity.
+    pub fn observe_for<M, I: IntoIterator<Item = Entity> + Send + 'static>(
+        &mut self,
+        targets: I,
+        observer: impl IntoEntityObserver<M>,
+    ) -> &mut Self {
+        self.queue(entity_command::observe_for(targets, observer))
+    }
+
     /// Clones parts of an entity (components, observers, etc.) onto another entity,
     /// configured through [`EntityClonerBuilder`].
     ///

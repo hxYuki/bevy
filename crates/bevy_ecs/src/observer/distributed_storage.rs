@@ -496,6 +496,15 @@ fn hook_on_add<E: Event, B: Bundle, S: ObserverSystem<E, B>>(
     });
 }
 
+/// Indicates which entity the observer is linked to.
+#[derive(Component)]
+#[relationship(relationship_target = Hosting)]
+pub(crate) struct HostOn(pub Entity);
+
+#[derive(Component)]
+#[relationship_target(relationship = HostOn, linked_spawn)]
+pub(crate) struct Hosting(Vec<Entity>);
+
 /// Tracks a list of entity observers for the [`Entity`] [`ObservedBy`] is added to.
 #[derive(Default, Debug)]
 #[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::Reflect))]
@@ -596,6 +605,9 @@ impl<E: Event, B: Bundle, M: 'static, S: IntoObserverSystem<E, B, M>>
 pub trait IntoEntityObserver<Marker>: Send + 'static {
     /// Converts this type into an [`Observer`] that watches the given entity.
     fn into_observer_for_entity(self, entity: Entity) -> Observer;
+
+    /// Converts this type into an [`Observer`] that watches the given entities.
+    fn into_observer_for_entities<I: IntoIterator<Item = Entity>>(self, entities: I) -> Observer;
 }
 
 impl<E: EntityEvent, B: Bundle, M, T: IntoObserverSystem<E, B, M>> IntoEntityObserver<(E, B, M)>
@@ -603,6 +615,9 @@ impl<E: EntityEvent, B: Bundle, M, T: IntoObserverSystem<E, B, M>> IntoEntityObs
 {
     fn into_observer_for_entity(self, entity: Entity) -> Observer {
         Observer::new(self).with_entity(entity)
+    }
+    fn into_observer_for_entities<I: IntoIterator<Item = Entity>>(self, entities: I) -> Observer {
+        Observer::new(self).with_entities(entities)
     }
 }
 
@@ -614,6 +629,13 @@ impl<E: EntityEvent, B: Bundle, M: 'static, S: IntoObserverSystem<E, B, M>>
         let mut observer = Observer::new(system);
         observer.conditions = conditions;
         observer.with_entity(entity)
+    }
+
+    fn into_observer_for_entities<I: IntoIterator<Item = Entity>>(self, entities: I) -> Observer {
+        let (system, conditions) = self.take_conditions();
+        let mut observer = Observer::new(system);
+        observer.conditions = conditions;
+        observer.with_entities(entities)
     }
 }
 

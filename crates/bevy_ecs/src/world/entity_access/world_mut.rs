@@ -1953,6 +1953,20 @@ impl<'w> EntityWorldMut<'w> {
         self.observe_with_caller(observer, MaybeLocation::caller())
     }
 
+    /// Creates an [`Observer`](crate::observer::Observer) watching for an [`EntityEvent`] of type `E` whose [`EntityEvent::event_target`]
+    /// targets any given entities.
+    ///
+    /// The observer will share lifetime with this entity.
+    ///
+    /// See [`EntityWorldMut::observe`] for more details.
+    pub fn observe_for<M>(
+        &mut self,
+        targets: impl IntoIterator<Item = Entity>,
+        observer: impl IntoEntityObserver<M>,
+    ) -> &mut Self {
+        self.observe_for_with_caller(targets, observer, MaybeLocation::caller())
+    }
+
     pub(crate) fn observe_with_caller<M>(
         &mut self,
         observer: impl IntoEntityObserver<M>,
@@ -1960,6 +1974,25 @@ impl<'w> EntityWorldMut<'w> {
     ) -> &mut Self {
         self.assert_not_despawned();
         let bundle = observer.into_observer_for_entity(self.entity);
+        move_as_ptr!(bundle);
+        self.world.spawn_with_caller(bundle, caller);
+        self.world.flush();
+        self.update_location();
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn observe_for_with_caller<M>(
+        &mut self,
+        targets: impl IntoIterator<Item = Entity>,
+        observer: impl IntoEntityObserver<M>,
+        caller: MaybeLocation,
+    ) -> &mut Self {
+        self.assert_not_despawned();
+        let bundle = (
+            observer.into_observer_for_entities(targets),
+            crate::observer::HostOn(self.entity),
+        );
         move_as_ptr!(bundle);
         self.world.spawn_with_caller(bundle, caller);
         self.world.flush();

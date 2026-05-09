@@ -130,13 +130,21 @@ fn setup(mut commands: Commands) {
     let mut observer = Observer::new(explode_mine);
 
     // As we spawn entities, we can make this observer watch each of them:
-    for _ in 0..1000 {
+    for _ in 0..500 {
         let entity = commands.spawn(Mine::random(&mut rng)).id();
         observer.watch_entity(entity);
     }
 
     // By spawning the Observer component, it becomes active!
     commands.spawn(observer);
+
+    // Or you can slimply spawn an observer that watches multiple entities.
+    let entities = (0..500)
+        .map(|_| commands.spawn(Mine::random(&mut rng)).id())
+        .collect::<Vec<_>>();
+
+    // You can let any entity to observe given entities. The observer will have the same lifecycle as the observing entity.
+    commands.spawn_empty().observe_for(entities, explode_mine);
 }
 
 fn on_add_mine(add: On<Add, Mine>, query: Query<&Mine>, mut index: ResMut<SpatialIndex>) {
