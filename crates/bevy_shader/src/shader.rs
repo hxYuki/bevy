@@ -154,6 +154,52 @@ impl Shader {
         let path = path.into();
         let (import_path, imports) = Shader::preprocess(&source, &path);
 
+        fn custom_import_to_asset_path(
+            import: ShaderImport,
+            import_path: &ShaderImport,
+        ) -> ShaderImport {
+            let ShaderImport::AssetPath(import_path) = import_path else {
+                panic!("Wesl shaders must be imported from an asset path");
+            };
+            match import {
+                ShaderImport::AssetPath(asset_path) => ShaderImport::AssetPath(asset_path),
+                ShaderImport::Custom(custom_import) => {
+                    let mut custom_paths = custom_import.split("::").collect::<Vec<_>>();
+                    if custom_paths[0] == "package" {
+                        custom_paths[0] = "shaders";
+                        let path = custom_paths.join("/");
+                        let import_path = std::path::Path::new(&path)
+                            .with_extension("")
+                            .to_string_lossy()
+                            .replace('\\', "/");
+                            // .trim_start_matches('/')
+                            // .to_string();
+
+                        ShaderImport::AssetPath(import_path)
+                    } else if custom_paths[0] == "super" {
+                        custom_paths.remove(0);
+                        let import_path = std::path::Path::new(import_path);
+                        let import_path = import_path
+                            .parent()
+                            .unwrap_or_else(|| std::path::Path::new(""));
+                        let import_path = import_path.join(custom_paths.join("/"));
+
+                        let import_path = import_path
+                            .with_extension("")
+                            .to_string_lossy()
+                            .replace('\\', "/");
+                            // .trim_start_matches('/')
+                            // .to_string();
+
+                        tracing::info!("Resolved import path for custom import: {custom_import} to {import_path}");
+                        ShaderImport::AssetPath(import_path)
+                    } else {
+                        panic!("Cannot resolve import path for custom import: {custom_import}. Wesl shaders must be imported from an asset path.");
+                    }
+                }
+            }
+        }
+
         match import_path {
             ShaderImport::AssetPath(asset_path) => {
                 // Create the shader import path - always starting with "/"
@@ -166,6 +212,11 @@ impl Shader {
                     .replace('\\', "/");
 
                 let import_path = ShaderImport::AssetPath(import_path_str.to_string());
+
+                let imports = imports
+                    .into_iter()
+                    .map(|import| custom_import_to_asset_path(import, &import_path))
+                    .collect();
 
                 Shader {
                     path,
@@ -351,6 +402,9 @@ impl AssetLoader for ShaderLoader {
                     The shader defs will be ignored."
             );
         }
+        #[cfg(feature = "shader_format_wesl")]
+        let mut is_wesl = false;
+
         let mut shader = match ext {
             "spv" => Shader::from_spirv(bytes, load_context.path().path().to_string_lossy()),
             "wgsl" => Shader::from_wgsl_with_defs(
@@ -366,13 +420,22 @@ impl AssetLoader for ShaderLoader {
                 Shader::from_glsl(String::from_utf8(bytes)?, naga::ShaderStage::Compute, path)
             }
             #[cfg(feature = "shader_format_wesl")]
-            "wesl" => Shader::from_wesl(String::from_utf8(bytes)?, path),
+            "wesl" => {
+                is_wesl = true;
+                Shader::from_wesl(String::from_utf8(bytes)?, path)
+            }
             _ => panic!("unhandled extension: {ext}"),
         };
 
         // collect and store file dependencies
         for import in &shader.imports {
             if let ShaderImport::AssetPath(asset_path) = import {
+                #[cfg(feature = "shader_format_wesl")]
+                let asset_path = if is_wesl {
+                    asset_path.trim_start_matches('/').to_string() + ".wesl"
+                } else {
+                    asset_path.clone()
+                };
                 shader.file_dependencies.push(load_context.load(asset_path));
             }
         }

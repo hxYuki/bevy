@@ -39,11 +39,11 @@ struct UtilityShader(Handle<Shader>);
 
 impl Plugin for CustomMaterialPlugin {
     fn build(&self, app: &mut App) {
-        let handle = app
-            .world_mut()
-            .resource_mut::<AssetServer>()
-            .load::<Shader>("shaders/util.wesl");
-        app.insert_resource(UtilityShader(handle));
+        // let handle = app
+        //     .world_mut()
+        //     .resource_mut::<AssetServer>()
+        //     .load::<Shader>("shaders/util.wesl");
+        // app.insert_resource(UtilityShader(handle));
     }
 }
 
