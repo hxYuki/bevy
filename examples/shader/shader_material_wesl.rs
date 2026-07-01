@@ -38,12 +38,12 @@ pub struct CustomMaterialPlugin;
 struct UtilityShader(Handle<Shader>);
 
 impl Plugin for CustomMaterialPlugin {
-    fn build(&self, app: &mut App) {
-        let handle = app
-            .world_mut()
-            .resource_mut::<AssetServer>()
-            .load::<Shader>("shaders/util.wesl");
-        app.insert_resource(UtilityShader(handle));
+    fn build(&self, _app: &mut App) {
+        // let handle = _app
+        //     .world_mut()
+        //     .resource_mut::<AssetServer>()
+        //     .load::<Shader>("shaders/util.wesl");
+        // _app.insert_resource(UtilityShader(handle));
     }
 }
 
@@ -126,7 +126,7 @@ impl Material for CustomMaterial {
     ) -> Result<(), SpecializedMeshPipelineError> {
         let fragment = descriptor.fragment.as_mut().unwrap();
         fragment.shader_defs.push(ShaderDefVal::Bool(
-            "PARTY_MODE".to_string(),
+            "PARTY_MODE".into(),
             key.bind_group_data.party_mode,
         ));
         Ok(())
