@@ -203,7 +203,7 @@ fn prepare_fullscreen_material_pipelines<T: FullscreenMaterial>(
         if material.is_none() {
             commands
                 .entity(entity)
-                .remove::<FullscreenMaterialPipelineId>();
+                .remove::<FullscreenMaterialPipelineId<T>>();
             continue;
         }
 
